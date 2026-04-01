@@ -272,33 +272,52 @@ async function validerInscription() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-// ─── Modal renommer champs ────────────────────────────────────────────────────
+// ─── Modal gérer champs ───────────────────────────────────────────────────────
 function ouvrirModalRenommerChamps() {
   const container = document.getElementById('champs-inputs');
   container.innerHTML = '';
-  champsActuels.forEach((c, i) => {
+
+  function ajouterLigneChamp(valeur = '') {
     const row = document.createElement('div');
-    row.style.marginBottom = '10px';
-    row.innerHTML = `<label class="form-label">Colonne ${i + 1}</label>
-      <input type="text" class="champ-rename" value="${c}" placeholder="Nom colonne ${i+1}"/>`;
-    container.appendChild(row);
-  });
-  // Bouton pour ajouter colonne si < 7
-  if (champsActuels.length < 7) {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-ghost btn-sm';
-    btn.textContent = '+ Ajouter colonne';
-    btn.onclick = () => {
-      if (container.querySelectorAll('.champ-rename').length >= 7) return;
-      const row2 = document.createElement('div');
-      row2.style.marginBottom = '10px';
-      row2.innerHTML = `<label class="form-label">Colonne ${container.querySelectorAll('.champ-rename').length + 1}</label>
-        <input type="text" class="champ-rename" placeholder="Nouvelle colonne"/>`;
-      container.insertBefore(row2, btn);
-    };
-    container.appendChild(btn);
+    row.className = 'champ-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px';
+    const idx = container.querySelectorAll('.champ-row').length + 1;
+    row.innerHTML = `
+      <label class="form-label" style="width:80px;flex-shrink:0;margin:0">Col. ${idx}</label>
+      <input type="text" class="champ-rename" value="${valeur}" placeholder="Nom colonne ${idx}" style="flex:1"/>
+      <button class="btn btn-danger btn-sm" title="Supprimer cette colonne"
+        onclick="this.closest('.champ-row').remove(); _renumeroterColonnes()">✕</button>`;
+    container.insertBefore(row, document.getElementById('btn-ajouter-champ'));
   }
+
+  // Bouton ajouter (inséré en premier pour servir d'ancre insertBefore)
+  const btn = document.createElement('button');
+  btn.id = 'btn-ajouter-champ';
+  btn.className = 'btn btn-ghost btn-sm';
+  btn.style.marginTop = '4px';
+  btn.textContent = '+ Ajouter colonne';
+  btn.onclick = () => {
+    if (container.querySelectorAll('.champ-rename').length >= 7) {
+      toast('Maximum 7 colonnes', 'error'); return;
+    }
+    ajouterLigneChamp();
+    _renumeroterColonnes();
+  };
+  container.appendChild(btn);
+
+  champsActuels.forEach(c => ajouterLigneChamp(c));
+  _renumeroterColonnes();
   ouvrirModal('modal-champs');
+}
+
+function _renumeroterColonnes() {
+  const rows = document.querySelectorAll('#champs-inputs .champ-row');
+  rows.forEach((row, i) => {
+    row.querySelector('.form-label').textContent = `Col. ${i + 1}`;
+    row.querySelector('.champ-rename').placeholder = `Nom colonne ${i + 1}`;
+  });
+  const btn = document.getElementById('btn-ajouter-champ');
+  if (btn) btn.style.display = rows.length >= 7 ? 'none' : '';
 }
 
 async function validerRenommerChamps() {
@@ -308,7 +327,7 @@ async function validerRenommerChamps() {
     await api(`/api/sports/${encodeURIComponent(sportSelectionne)}/champs`, 'PUT', { champs: vals });
     fermerModal('modal-champs');
     await chargerInscrits();
-    toast('Champs mis à jour ✓');
+    toast('Colonnes mises à jour ✓');
   } catch (e) { toast(e.message, 'error'); }
 }
 
